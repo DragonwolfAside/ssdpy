@@ -79,6 +79,29 @@ class SSDPClient(object):
                 pass
         return parsed_responses
 
+    async def async_m_search(self, st="ssdp:all", mx=1):
+        """
+        Send an M-SEARCH request and gather responses.
+
+        :param st: The Search Target, used to narrow down the responses that should be received. Defaults to "ssdp:all" which should get responses from any SSDP-enabled device.
+        :type st: str
+
+        :param mx: Maximum wait time (in seconds) that devices are allowed to wait before sending a response. Should be between 1 and 5, though this is not enforced in this implementation. Devices will randomly wait for anywhere between 0 and 'mx' seconds in order to avoid flooding the client that sends the M-SEARCH. Increase the value of 'mx' if you expect a large number of devices to answer, in order to avoid losing responses.
+        :type mx: int
+
+        :return: A list of all discovered SSDP services. Each service is represented by a dict, with the keys being the lowercase equivalents of the response headers.
+        """
+        host = "{}:{}".format(self.broadcast_ip, self.port)
+        data = create_msearch_payload(host, st, mx)
+        self.send(data)
+        for response in self.recv():
+            try:
+                headers = parse_headers(response)
+                yield headers
+            except ValueError:
+                pass
+        return
+
 
 def discover():
     """
